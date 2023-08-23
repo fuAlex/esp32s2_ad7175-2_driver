@@ -16,8 +16,6 @@
 #include "driver/spi_master.h"
 #include "driver/gpio.h"
 
-#include "pretty_effect.h"
-
 #include "AD7175.h"
 #include "Communication.h"
 
@@ -30,9 +28,9 @@ static void adc_read_task(void* arg)
     for(;;) {
         if (xSemaphoreTake(rdy_sem, portMAX_DELAY)) {
              // data can be read
-            // int32_t adc_val = 0;
-            // AD7175_ReadData(&adc_val);
-            // esp_rom_printf("adc val %d\n", adc_val);
+            int32_t adc_val = 0;
+            AD7175_ReadData(&adc_val);
+            esp_rom_printf("adc val %d\n", adc_val);
         }
 		if(xSemaphoreTake(err_sem, NULL)) {
             uint8_t state = 0;

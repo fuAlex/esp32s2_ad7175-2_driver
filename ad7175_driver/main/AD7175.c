@@ -78,7 +78,6 @@ int32_t AD7175_ReadRegister(st_reg* pReg)
 {
     int32_t ret       = 0;
     uint8_t buffer[8] = {0, 0, 0, 0, 0, 0, 0, 0};
-    uint8_t msgBuf[8] = {0, 0, 0, 0, 0, 0, 0, 0};
     uint8_t i         = 0;
     uint8_t crc       = 0;
 
@@ -196,7 +195,7 @@ int32_t AD7175_GetState(uint8_t *st)
 
     /* Read the value of the Status Register */
     ret = AD7175_ReadRegister(&AD7175_regs[Status_Register]);
-    printf("st %x\n", AD7175_regs[Status_Register].value);
+    printf("st %lx\n", (uint32_t)AD7175_regs[Status_Register].value);
     if(ret <= 0)
         return ESP_FAIL;
 
@@ -312,7 +311,7 @@ int32_t AD7175_Setup(void)
 
     /* Read ID register */
     ESP_ERROR_CHECK( AD7175_ReadRegister(&AD7175_regs[ID_st_reg]) );
-    printf("device id: %x\r\n", AD7175_regs[ID_st_reg].value);
+    printf("device id: %04lx\r\n", (uint32_t)AD7175_regs[ID_st_reg].value);
 
     /* Initialize ADC mode register */
     ESP_ERROR_CHECK( AD7175_WriteRegister(AD7175_regs[ADC_Mode_Register]) );
@@ -346,22 +345,22 @@ int32_t AD7175_Setup(void)
     ESP_ERROR_CHECK( AD7175_WriteRegister(AD7175_regs[CH_Map_4]) );
 
     ESP_ERROR_CHECK( AD7175_ReadRegister(&AD7175_regs[ADC_Mode_Register]) );
-    printf("ADC MODE val %x\n", AD7175_regs[ADC_Mode_Register].value);
+    printf("ADC MODE val %04lx\n", (uint32_t)AD7175_regs[ADC_Mode_Register].value);
     
     ESP_ERROR_CHECK( AD7175_ReadRegister(&AD7175_regs[Interface_Mode_Register]) );
-    printf("IF mode val %x\n", AD7175_regs[Interface_Mode_Register].value);
+    printf("IF mode val %04lx\n", (uint32_t)AD7175_regs[Interface_Mode_Register].value);
 
     ESP_ERROR_CHECK( AD7175_ReadRegister(&AD7175_regs[CH_Map_1]) );
-    printf("CH1 MAP val %x\n", AD7175_regs[CH_Map_1].value);
+    printf("CH1 MAP val %04lx\n", (uint32_t)AD7175_regs[CH_Map_1].value);
     
     ESP_ERROR_CHECK( AD7175_ReadRegister(&AD7175_regs[Setup_Config_1]) );
-    printf("setup 1 val %x\n", AD7175_regs[Setup_Config_1].value);
+    printf("setup 1 val %04lx\n", (uint32_t)AD7175_regs[Setup_Config_1].value);
 
     /*Protect the user registers*/
     // AD7175_regs[Interface_Mode_Register].value |= AD717X_IFMODE_REG_REG_CHECK;
     // ESP_ERROR_CHECK( AD7175_WriteRegister(AD7175_regs[Interface_Mode_Register]) );
     ESP_ERROR_CHECK( AD7175_ReadRegister(&AD7175_regs[IOCon_Register]) );
-    printf("IOCON val %x\n", AD7175_regs[IOCon_Register].value);
+    printf("IOCON val %04lx\n", (uint32_t)AD7175_regs[IOCon_Register].value);
 
     return ESP_OK;
 }

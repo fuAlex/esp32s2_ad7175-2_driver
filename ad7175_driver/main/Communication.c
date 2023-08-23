@@ -44,6 +44,7 @@
 /***************************** Include Files **********************************/
 /******************************************************************************/
 #include <stdio.h>
+#include <stddef.h>
 #include <stdlib.h>
 #include <string.h>
 #include "freertos/FreeRTOS.h"
@@ -59,9 +60,10 @@
 #include "driver/gpio.h"
 #include "hal/gpio_ll.h"
 
-static const char *TAG = "adc";
-
 #define ADC_HOST    SPI2_HOST
+
+static const char *TAG = "adc";
+#define AD7175_LOG(level, ...)    ESP_EARLY_LOG##level(TAG, ##__VA_ARGS__)
 
 /**
  * Hardware connect
@@ -276,26 +278,25 @@ unsigned char SPI_Write(unsigned char slaveDeviceId,
                         unsigned char* data,
                         unsigned char bytesNumber)
 {
-	ESP_LOGD(TAG, "[W]cmd %02x, num %d :", data[0], bytesNumber);
+	AD7175_LOG(D, "[W]cmd %02x, num %d :", data[0], bytesNumber-1);
 
 	// Add your code here.
 	esp_err_t ret;
     spi_transaction_t t;
-	uint8_t *p = dma_access_buf;
+	uint8_t *p = (uint8_t *)dma_access_buf;
 
     memset(&t, 0, sizeof(t));       //Zero out the transaction
 	t.cmd = data[0];
 	t.length = 8 * (bytesNumber - 1);
 
 	if (p == NULL) {
-		ESP_LOGE(TAG, "%s %d error!!!\n");
+		AD7175_LOG(D,"%s %d error!!!\n");
 		return 0;
 	}
 	for(int i=0; i<bytesNumber-1; i++) {
 		p[i] = data[i+1];
-		ESP_LOGD(TAG, "%02x ", data[i+1]);
+		AD7175_LOG(D, "%02x ", data[i+1]);
 	}
-	ESP_LOGD(TAG, "\n");
 	t.tx_buffer = p;
     ret = spi_device_polling_transmit(spi_for_adc_init, &t);
 
@@ -315,7 +316,7 @@ unsigned char SPI_Read(unsigned char slaveDeviceId,
                        unsigned char* data,
                        unsigned char bytesNumber)
 {
-	ESP_LOGD(TAG, "[R]cmd %02x, num %d :", data[0], bytesNumber);
+	AD7175_LOG(D, "[R]cmd %02x, num %d :", data[0], bytesNumber-1);
 
 	// Add your code here.
 	esp_err_t ret;
@@ -329,9 +330,8 @@ unsigned char SPI_Read(unsigned char slaveDeviceId,
     ret = spi_device_polling_transmit(spi_for_adc_init, &t);
 	for(int i=0; i<bytesNumber-1; i++) {
 		data[i+1] = p[i];
-		ESP_LOGD(TAG, "%02x ", data[i+1]);
+		AD7175_LOG(D, "%02x ", data[i+1]);
 	}
-	ESP_LOGD(TAG, "\n");
 
 	return (ret == ESP_OK) ? (bytesNumber - 1) : 0;
 }

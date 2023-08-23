@@ -107,7 +107,7 @@ st_reg AD7175_regs[] =
 	/*0x21*/{AD717X_SETUPCON1_REG	, 0x0000, 2}, //Setup_Config_2
 	/*0x22*/{AD717X_SETUPCON2_REG	, 0x0000, 2}, //Setup_Config_3
 	/*0x23*/{AD717X_SETUPCON3_REG	, 0x0000, 2}, //Setup_Config_4
-	/*0x28*/{AD717X_FILTCON0_REG	, 0x0001, 2}, //Filter_Config_1
+	/*0x28*/{AD717X_FILTCON0_REG	, 0x0009, 2}, //Filter_Config_1
 	/*0x29*/{AD717X_FILTCON1_REG	, 0x0200, 2}, //Filter_Config_2
 	/*0x2a*/{AD717X_FILTCON2_REG	, 0x0200, 2}, //Filter_Config_3
 	/*0x2b*/{AD717X_FILTCON3_REG	, 0x0200, 2}, //Filter_Config_4
