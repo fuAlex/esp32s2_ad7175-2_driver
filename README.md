@@ -24,7 +24,8 @@ AD7175_SPI_CLK_SPEED (20 * 1000 * 1000) // MAX 20 MHz for AD7175-2
 ```
 
 # 文件结构：
-|_ AD7175.c         // AD7175 driver to config Register
-|_ AD7175_regs.h    // Define AD7175 register
-|_ Communication.c  // SPI driver for AD7175
-|_ main.c           // Demo
+
+|_ AD7175.c         // AD7175 driver to config Register  
+|_ AD7175_regs.h    // Define AD7175 register  
+|_ Communication.c  // SPI driver for AD7175  
+|_ main.c           // Demo  
