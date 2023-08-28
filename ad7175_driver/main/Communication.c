@@ -59,29 +59,40 @@
 #include "driver/spi_master.h"
 #include "driver/gpio.h"
 #include "hal/gpio_ll.h"
+#include "AD7175.h"
 
-#define ADC_HOST    SPI2_HOST
+static const char *TAG = "ad7175";
 
-static const char *TAG = "adc";
-#define AD7175_LOG(level, ...)    ESP_EARLY_LOG##level(TAG, ##__VA_ARGS__)
-
+#define LOG_DEBUG 	0 // open debug lo for spi_read and spi_write
 /**
  * Hardware connect
- * ESP32S2 <-> AD7175
+ * ESP32S2 <-> AD7175-2
 */
-#define PIN_NUM_MISO 37
-#define PIN_NUM_MOSI 35
-#define PIN_NUM_CLK  36
-#define PIN_NUM_CS   34
+#define ADC_HOST     		SPI2_HOST
+#define PIN_NUM_MISO 		37
+#define PIN_NUM_MOSI 		35
+#define PIN_NUM_CLK  		36
+#define PIN_NUM_CS   		34
+#define PIN_NUM_ADC_ERR   	33			// Monitor the ADC error status. 1: normal; 0: error.
+#define PIN_NUM_ADC_RDY   	PIN_NUM_MISO // Monitor the ADC data ready status. 1: busy; 0: ready.
 
-#define PIN_NUM_ADC_ERR   33
-#define PIN_NUM_ADC_RDY   PIN_NUM_MISO
+#define AD7175_SPI_CLK_SPEED (20 * 1000 * 1000) // MAX 20 MHz for AD7175-2
+
+/**If compile SPI driver to IRAM can fast exe*/
+#ifdef CONFIG_SPI_MASTER_IN_IRAM
+#define ADC_COMM_DRIVER_ATTR IRAM_ATTR
+#else
+#define ADC_COMM_DRIVER_ATTR
+#endif
 
 static spi_device_handle_t spi_for_adc_init;
 
 static DMA_ATTR uint32_t dma_access_buf[8] = {0}; // DMA can access buff that Word alignt
 static DRAM_ATTR SemaphoreHandle_t ready_evt_sem = NULL;
 static DRAM_ATTR SemaphoreHandle_t err_evt_sem = NULL;
+static DRAM_ATTR int32_t *DATA_BUFF  = NULL;
+static DRAM_ATTR int32_t DATA_BUFF_LEN = 0;
+static DRAM_ATTR int32_t DATA_BUFF_CNT = 0;
 
 /******************************************************************************/
 /************************ Functions Definitions *******************************/
@@ -92,7 +103,20 @@ static void IRAM_ATTR gpio_isr_handler(void* arg)
 	int task_awoken = pdFALSE;
     uint32_t gpio_num = (uint32_t) arg;
 	if (gpio_num == PIN_NUM_ADC_RDY) {
-		xSemaphoreGiveFromISR(ready_evt_sem, &task_awoken);
+#ifdef CONFIG_SPI_MASTER_IN_IRAM
+		if (DATA_BUFF_CNT < DATA_BUFF_LEN) {
+			AD7175_ReadData(&DATA_BUFF[DATA_BUFF_CNT]); // read adc date quickly
+			if (++DATA_BUFF_CNT == DATA_BUFF_LEN) {
+				AD717X_Standby(); // Go to standby mdoe to save power.
+				spi_device_release_bus(spi_for_adc_init);
+				xSemaphoreGiveFromISR(ready_evt_sem, &task_awoken); // reading done and notify user
+			}
+		}
+#else
+		if (ready_evt_sem) {
+			xSemaphoreGiveFromISR(ready_evt_sem, &task_awoken);
+		}
+#endif
 	}
 	if (gpio_num == PIN_NUM_ADC_ERR) {
 		xSemaphoreGiveFromISR(err_evt_sem, &task_awoken);
@@ -111,6 +135,7 @@ static void IRAM_ATTR gpio_isr_handler(void* arg)
 *
 * @note When use the SPI to transmit data, should disable the MISI pin gpio interrupt.
 * @note Must make sure the SPI reading time smaller than internal of data output.
+* @note Max data output freq is 500Hz.
 *
 * @param reg - Semaphore handler
 *
@@ -118,6 +143,10 @@ static void IRAM_ATTR gpio_isr_handler(void* arg)
 ******************************************************************************/
 SemaphoreHandle_t adc_data_ready_notify_init(void)
 {
+#ifdef CONFIG_SPI_MASTER_IN_IRAM
+	ESP_LOGE(TAG, "ERROR! Please undefine `CONFIG_SPI_MASTER_IN_IRAM` or use `adc_data_ready_reading_from_isr()`");
+	return NULL;
+#endif
 	// create a queue to handle gpio event from isr
 	if (ready_evt_sem == NULL) {
     	ready_evt_sem = xSemaphoreCreateBinary();
@@ -134,6 +163,63 @@ SemaphoreHandle_t adc_data_ready_notify_init(void)
 	gpio_set_level(PIN_NUM_CS, 0);
 
 	return ready_evt_sem;
+}
+
+/**************************************************************************//**
+* @brief Monitor the ready state by MISO interrupt.
+*        When CS line is low and MISO line no data to transmit. the MISO will output ready info of adc data (low status is ready).
+*        So enable the MISO pin nagitive edge interrupt to monitor the ready state. User can take the sem to get the data state.
+*        Of cause, User also can read `AD717X_STATUS_REG` to get ready state.
+*
+* @note When use the SPI to transmit data, should disable the MISI pin gpio interrupt.
+* @note Must make sure the SPI reading time smaller than internal of data output.
+* @note Max 50KHz sample rate
+* @note The buff data should be in DRAM_ATTR
+* @note Please enable CONFIG_SPI_MASTER_IN_IRAM in menuconfig
+*
+* @param buff - The buff pointer to save adc data. should in DRAM_ATTR
+* @param read_len - the data lenth to read
+* @param reg - Semaphore handler
+*
+* @return Returns ESP_OK for success
+******************************************************************************/
+SemaphoreHandle_t adc_data_ready_reading_from_isr(int32_t *buff, int32_t read_len)
+{
+#ifndef CONFIG_SPI_MASTER_IN_IRAM
+	ESP_LOGE(TAG, "ERROR CONFIG_SPI_MASTER_IN_IRAM no define");
+	return NULL;
+#endif
+	// create a queue to handle gpio event from isr
+	if (ready_evt_sem == NULL) {
+    	ready_evt_sem = xSemaphoreCreateBinary();
+		//change gpio interrupt type for one pin
+		gpio_set_intr_type(PIN_NUM_ADC_RDY, GPIO_INTR_NEGEDGE);
+		//install gpio isr service
+		gpio_install_isr_service(ESP_INTR_FLAG_IRAM);
+		//hook isr handler for specific gpio pin
+		gpio_isr_handler_add(PIN_NUM_ADC_RDY, gpio_isr_handler, (void*) PIN_NUM_ADC_RDY);
+
+		/**If output data ready signal via MISO pin, should tie low the CS pin*/
+		gpio_set_level(PIN_NUM_CS, 0);
+	}
+	/* Reduce the consumption of SPI reading, which can reduce the time of about 2us */
+	spi_device_acquire_bus(spi_for_adc_init, portMAX_DELAY);
+
+	AD717X_Resume();// resume from standby mode.
+	DATA_BUFF = buff;
+	DATA_BUFF_LEN = read_len;
+	DATA_BUFF_CNT = 0;
+
+
+	return ready_evt_sem;
+}
+
+void adc_data_ready_deinit(void)
+{
+	if (ready_evt_sem) {
+    	vSemaphoreDelete(ready_evt_sem);
+		ready_evt_sem = NULL;
+	}
 }
 
 /**************************************************************************//**
@@ -237,7 +323,7 @@ unsigned char SPI_Init_AD7175(unsigned char lsbFirst,
     spi_device_interface_config_t devcfg={
 		.command_bits = 8,	//8 bit cmd
 		.dummy_bits = 0,
-        .clock_speed_hz=10*1000*1000, 	//Clock out at 10 MHz // max 20M
+        .clock_speed_hz = AD7175_SPI_CLK_SPEED, 	//Clock out at 10 MHz // max 20M
 		.input_delay_ns = 0,			//Maximum data valid time of slave
         .mode = 3,                      //SPI mode 3
         .spics_io_num=-1,       //CS pin
@@ -274,28 +360,37 @@ unsigned char SPI_Init_AD7175(unsigned char lsbFirst,
  *
  * @return Number of written bytes.
 *******************************************************************************/
-unsigned char SPI_Write(unsigned char slaveDeviceId,
+inline
+unsigned char 
+ADC_COMM_DRIVER_ATTR 
+SPI_Write(unsigned char slaveDeviceId,
                         unsigned char* data,
                         unsigned char bytesNumber)
 {
-	AD7175_LOG(D, "[W]cmd %02x, num %d :", data[0], bytesNumber-1);
-
+#if LOG_DEBUG
+	esp_rom_printf(DRAM_STR("\n[W]cmd %02x, num %d :"), data[0], (int)(bytesNumber-1));
+	for(int i=0; i<bytesNumber-1; i++) {
+		esp_rom_printf(DRAM_STR"%02x "), data[i+1]);
+	}
+	esp_rom_printf(DRAM_STR"\n"));
+#endif
 	// Add your code here.
 	esp_err_t ret;
-    spi_transaction_t t;
+    spi_transaction_t t = {
+		.flags = 0,
+		.cmd = 0,
+		.addr = 0,
+		.length = 0,
+		.rxlength = 0,
+		.user = NULL,
+	};
 	uint8_t *p = (uint8_t *)dma_access_buf;
 
-    memset(&t, 0, sizeof(t));       //Zero out the transaction
 	t.cmd = data[0];
 	t.length = 8 * (bytesNumber - 1);
 
-	if (p == NULL) {
-		AD7175_LOG(D,"%s %d error!!!\n");
-		return 0;
-	}
 	for(int i=0; i<bytesNumber-1; i++) {
 		p[i] = data[i+1];
-		AD7175_LOG(D, "%02x ", data[i+1]);
 	}
 	t.tx_buffer = p;
     ret = spi_device_polling_transmit(spi_for_adc_init, &t);
@@ -312,26 +407,37 @@ unsigned char SPI_Write(unsigned char slaveDeviceId,
  *
  * @return Number of read bytes.
 *******************************************************************************/
-unsigned char SPI_Read(unsigned char slaveDeviceId,
+inline
+unsigned char 
+ADC_COMM_DRIVER_ATTR 
+SPI_Read(unsigned char slaveDeviceId,
                        unsigned char* data,
                        unsigned char bytesNumber)
 {
-	AD7175_LOG(D, "[R]cmd %02x, num %d :", data[0], bytesNumber-1);
-
-	// Add your code here.
 	esp_err_t ret;
-    spi_transaction_t t;
+    spi_transaction_t t = {
+		.flags = 0,
+		.cmd = 0,
+		.addr = 0,
+		.length = 0,
+		.rxlength = 0,
+		.user = NULL,
+	};
 	uint8_t *p = dma_access_buf;
 
-    memset(&t, 0, sizeof(t));       //Zero out the transaction
 	t.cmd = data[0];
 	t.rxlength = 8 * (bytesNumber - 1);
 	t.rx_buffer = p;
     ret = spi_device_polling_transmit(spi_for_adc_init, &t);
 	for(int i=0; i<bytesNumber-1; i++) {
 		data[i+1] = p[i];
-		AD7175_LOG(D, "%02x ", data[i+1]);
 	}
-
+#if LOG_DEBUG
+	esp_rom_printf(DRAM_STR("\n[R]cmd %02x, num %d :"), data[0], (int)(bytesNumber-1));
+	for(int i=0; i<bytesNumber-1; i++) {
+		esp_rom_printf(DRAM_STR("%02x "), data[i+1]);
+	}
+	esp_rom_printf(DRAM_STR("\n"));
+#endif
 	return (ret == ESP_OK) ? (bytesNumber - 1) : 0;
 }

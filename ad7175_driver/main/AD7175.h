@@ -68,5 +68,8 @@ uint8_t AD717X_ComputeXOR8(uint8_t * pBuf, uint8_t bufSize);
 int32_t AD7175_Setup(void);
 int32_t AD717X_Reset(void);
 int32_t AD7175_GetState(uint8_t *st);
+esp_err_t AD717X_Standby(void);
+esp_err_t AD717X_Resume(void);
+esp_err_t AD717X_Data_output_freq(int channel, int freq_hz);
 
 #endif // __AD7175_H__

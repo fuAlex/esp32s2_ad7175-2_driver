@@ -88,7 +88,7 @@ unsigned char SPI_Read(unsigned char slaveDeviceId,
 * @return Returns ESP_OK for success
 ******************************************************************************/
 SemaphoreHandle_t adc_data_ready_notify_init(void);
-
+SemaphoreHandle_t adc_data_ready_reading_from_isr(int32_t *buff, int32_t read_len);
 /**************************************************************************//**
 * @brief Monitor the adc error state by MISO interrupt.
 *        The ERROR pin of AD717X can output the adc error state. So, So enable the AD717X GPIO nagitive edge interrupt to monitor the error state. 

@@ -58,12 +58,18 @@
 
 static const char *TAG = "adc";
 
+#ifdef CONFIG_SPI_MASTER_IN_IRAM
+#define ADC_COMM_DRIVER_ATTR IRAM_ATTR
+#else
+#define ADC_COMM_DRIVER_ATTR
+#endif
+
 /******************************************************************************/
 /************************ Local variables and types ***************************/
 /******************************************************************************/
 struct AD7175_state {
     uint8_t useCRC;
-} AD7175_st;
+} DRAM_ATTR AD7175_st;
 
 /**************************************************************************//**
 * @brief Reads the value of the specified register
@@ -74,7 +80,9 @@ struct AD7175_state {
 *
 * @return Returns 0 for success or negative error code.
 ******************************************************************************/
-int32_t AD7175_ReadRegister(st_reg* pReg)
+int32_t
+ADC_COMM_DRIVER_ATTR
+AD7175_ReadRegister(st_reg* pReg)
 {
     int32_t ret       = 0;
     uint8_t buffer[8] = {0, 0, 0, 0, 0, 0, 0, 0};
@@ -89,14 +97,14 @@ int32_t AD7175_ReadRegister(st_reg* pReg)
                    buffer, 
                    (AD7175_st.useCRC ? pReg->size + 1 : pReg->size) + 1);
     if(ret <= 0) {
-        printf("err");
+        esp_rom_printf(DRAM_STR("READ ERROR\n"));
         return ESP_FAIL;
     }
     /* Check the CRC */
     if(AD717X_IFMODE_REG_CRC_STAT(AD7175_st.useCRC)) {
         crc = AD717X_ComputeCRC8(buffer, pReg->size + 2);
         if(crc) {
-            ESP_LOGE(TAG, "CRC ERROR\n");
+            esp_rom_printf(DRAM_STR("CRC ERROR\n"));
             return ESP_ERR_INVALID_CRC;
         }
     }
@@ -104,19 +112,18 @@ int32_t AD7175_ReadRegister(st_reg* pReg)
 		crc = AD717X_ComputeXOR8(buffer, pReg->size + 2);
         if(crc) {
             for(int i=0; i<pReg->size + 2; i++) {
-                esp_rom_printf("[%x]", buffer[i]);
+                esp_rom_printf(DRAM_STR("[%x]"), buffer[i]);
             }
-            ESP_LOGE(TAG, "CRC ERROR crc%x\n", crc);
+            esp_rom_printf(DRAM_STR("CRC ERROR crc %x\n"), crc);
             return ESP_ERR_INVALID_CRC;
         }
 	}
 
     /* Build the result */
     pReg->value = 0;
-    for(i = 1; i < pReg->size + 1; i++)
-    {
+    for(i = 1; i < pReg->size + 1; i++) {
         pReg->value <<= 8;
-        pReg->value += buffer[i];
+        pReg->value |= buffer[i];
     }
 
     return ESP_OK;
@@ -129,7 +136,9 @@ int32_t AD7175_ReadRegister(st_reg* pReg)
 *
 * @return Returns 0 for success or negative error code.
 ******************************************************************************/
-int32_t AD7175_WriteRegister(st_reg reg)
+int32_t
+ADC_COMM_DRIVER_ATTR
+AD7175_WriteRegister(st_reg reg)
 {
     int32_t ret      = 0;
     int32_t regValue = 0;
@@ -172,37 +181,29 @@ int32_t AD7175_WriteRegister(st_reg reg)
 ******************************************************************************/
 int32_t AD7175_WaitForReady(uint32_t timeout)
 {
-    int32_t ret;
+    int32_t ret = 0;
     int8_t ready = 0;
 
     while(!ready && --timeout)
     {
         /* Read the value of the Status Register */
         ret = AD7175_ReadRegister(&AD7175_regs[Status_Register]);
-        if(ret <= 0)
-            return ESP_FAIL;
-
         /* Check the RDY bit in the Status Register */
         ready = (AD7175_regs[Status_Register].value & STATUS_REG_RDY) != 0;
     }
 
-    return timeout ? ESP_OK : ESP_FAIL; 
+    return ret;
 }
 
 int32_t AD7175_GetState(uint8_t *st)
 {
-    int32_t ret;
+    int32_t ret = 0;
 
     /* Read the value of the Status Register */
     ret = AD7175_ReadRegister(&AD7175_regs[Status_Register]);
-    printf("st %lx\n", (uint32_t)AD7175_regs[Status_Register].value);
-    if(ret <= 0)
-        return ESP_FAIL;
-
-    
     *st = AD7175_regs[Status_Register].value;
 
-    return ESP_OK; 
+    return ret; 
 }
 
 /**************************************************************************//**
@@ -212,17 +213,19 @@ int32_t AD7175_GetState(uint8_t *st)
 *
 * @return Returns 0 for success or negative error code.
 ******************************************************************************/
-int32_t AD7175_ReadData(int32_t* pData)
+inline
+int32_t
+ADC_COMM_DRIVER_ATTR
+AD7175_ReadData(int32_t* pData)
 {
     int32_t ret;
 
     /* Read the value of the Status Register */
     ret = AD7175_ReadRegister(&AD7175_regs[Data_Register]);
-
     /* Get the read result */
     *pData = AD7175_regs[Data_Register].value;
 
-    return (ret > 0) ? ESP_OK : ESP_FAIL;
+    return ret;
 }
 
 /***************************************************************************//**
@@ -233,7 +236,10 @@ int32_t AD7175_ReadData(int32_t* pData)
 *
 * @return Returns the computed CRC checksum.
 *******************************************************************************/
-uint8_t AD717X_ComputeCRC8(uint8_t * pBuf,
+inline
+uint8_t
+ADC_COMM_DRIVER_ATTR
+AD717X_ComputeCRC8(uint8_t * pBuf,
 			   uint8_t bufSize)
 {
 	uint8_t i   = 0;
@@ -262,8 +268,10 @@ uint8_t AD717X_ComputeCRC8(uint8_t * pBuf,
 *
 * @return Returns the computed XOR checksum.
 *******************************************************************************/
-uint8_t AD717X_ComputeXOR8(uint8_t * pBuf,
-			   uint8_t bufSize)
+inline
+uint8_t
+ADC_COMM_DRIVER_ATTR
+AD717X_ComputeXOR8(uint8_t * pBuf, uint8_t bufSize)
 {
 	uint8_t xor = 0;
 
@@ -294,7 +302,72 @@ int32_t AD717X_Reset(void)
 	return ret;
 }
 
-// int32_t AD717X_Output()
+/***************************************************************************//**
+* @brief AD717X go to standby mode.
+*
+* @return Returns 0 for success or negative error code.
+*******************************************************************************/
+inline
+esp_err_t
+ADC_COMM_DRIVER_ATTR
+AD717X_Standby(void)
+{
+    AD7175_regs[ADC_Mode_Register].value &= (~(AD717X_ADCMODE_REG_MODE(0x7)));
+    AD7175_regs[ADC_Mode_Register].value |= (AD717X_ADCMODE_REG_MODE(0x2));
+    return AD7175_WriteRegister(AD7175_regs[ADC_Mode_Register]);
+}
+
+/***************************************************************************//**
+* @brief AD717X resume from standby mode.
+*
+* @return Returns 0 for success or negative error code.
+*******************************************************************************/
+inline
+esp_err_t
+ADC_COMM_DRIVER_ATTR
+AD717X_Resume(void)
+{
+    AD7175_regs[ADC_Mode_Register].value &= (~(AD717X_ADCMODE_REG_MODE(0x7)));
+    AD7175_regs[ADC_Mode_Register].value |= (AD717X_ADCMODE_REG_MODE(0x0));
+    return AD7175_WriteRegister(AD7175_regs[ADC_Mode_Register]);
+}
+
+/***************************************************************************//**
+* @brief AD717X set data output freq for channel.
+*
+* @note The output frequency is related to filter selection and register SING_SYS.
+*
+* @param freq_hz refer to `ad7172_sin5_sin1_sing_sys_freq_hz_t` or `ad7172_sin5_sin1_freq_hz_t`
+* @param channel 0, 1, 2, 3
+* 
+* @return Returns 0 for success or negative error code.
+*******************************************************************************/
+esp_err_t AD717X_Data_output_freq(int channel, int freq_hz)
+{
+    if (freq_hz >= AD7172_FREQ_MAX) {
+        printf("freq not support\n");
+        return ESP_FAIL;
+    }
+    switch(channel) {
+    case 0:
+        AD7175_regs[Filter_Config_1].value &= (~AD717X_FILT_CONF_REG_ODR(0x1f));
+        AD7175_regs[Filter_Config_1].value |= AD717X_FILT_CONF_REG_ODR(freq_hz);
+        return AD7175_WriteRegister(AD7175_regs[Filter_Config_1]);
+    case 1:
+        AD7175_regs[Filter_Config_2].value &= (~AD717X_FILT_CONF_REG_ODR(0x1f));
+        AD7175_regs[Filter_Config_2].value |= AD717X_FILT_CONF_REG_ODR(freq_hz);
+        return AD7175_WriteRegister(AD7175_regs[Filter_Config_2]);
+    case 2:
+        AD7175_regs[Filter_Config_3].value &= (~AD717X_FILT_CONF_REG_ODR(0x1f));
+        AD7175_regs[Filter_Config_3].value |= AD717X_FILT_CONF_REG_ODR(freq_hz);
+        return AD7175_WriteRegister(AD7175_regs[Filter_Config_3]);
+    case 3:
+        AD7175_regs[Filter_Config_4].value &= (~AD717X_FILT_CONF_REG_ODR(0x1f));
+        AD7175_regs[Filter_Config_4].value |= AD717X_FILT_CONF_REG_ODR(freq_hz);
+        return AD7175_WriteRegister(AD7175_regs[Filter_Config_4]);
+    }
+    return ESP_OK;
+}
 
 /**************************************************************************//**
 * @brief Initializes the AD7175 
@@ -303,6 +376,7 @@ int32_t AD717X_Reset(void)
 ******************************************************************************/
 int32_t AD7175_Setup(void)
 {
+    esp_log_level_set(TAG, ESP_LOG_DEBUG);
     /* Initialize the SPI communication */
     SPI_Init_AD7175(0, 8000000, 1, 0);
 
@@ -314,13 +388,13 @@ int32_t AD7175_Setup(void)
     printf("device id: %04lx\r\n", (uint32_t)AD7175_regs[ID_st_reg].value);
 
     /* Initialize ADC mode register */
+    AD7175_regs[ADC_Mode_Register].value |= (AD717X_ADCMODE_SING_CYC);
     ESP_ERROR_CHECK( AD7175_WriteRegister(AD7175_regs[ADC_Mode_Register]) );
 
     /* Initialize Interface mode register */
-    AD7175_regs[Interface_Mode_Register].value |= AD717X_IFMODE_REG_XOR_EN;
-    AD7175_regs[Interface_Mode_Register].value |= AD717X_IFMODE_REG_DOUT_RESET;
+    AD7175_regs[Interface_Mode_Register].value |= (AD717X_IFMODE_REG_XOR_EN | AD717X_IFMODE_REG_DOUT_RESET);
     ESP_ERROR_CHECK( AD7175_WriteRegister(AD7175_regs[Interface_Mode_Register]) );
-    AD7175_st.useCRC = (AD717X_IFMODE_REG_CRC_EN | AD717X_IFMODE_REG_XOR_EN) & (AD7175_regs[Interface_Mode_Register].value);
+    AD7175_st.useCRC = AD717X_IFMODE_REG_XOR_EN;
 
     /* Initialize GPIO configuration register */
     AD7175_regs[IOCon_Register].value |= AD717X_GPIOCON_REG_ERR_EN(2); // error pin ouput adc error status
@@ -361,6 +435,8 @@ int32_t AD7175_Setup(void)
     // ESP_ERROR_CHECK( AD7175_WriteRegister(AD7175_regs[Interface_Mode_Register]) );
     ESP_ERROR_CHECK( AD7175_ReadRegister(&AD7175_regs[IOCon_Register]) );
     printf("IOCON val %04lx\n", (uint32_t)AD7175_regs[IOCon_Register].value);
+
+    AD717X_Resume();
 
     return ESP_OK;
 }

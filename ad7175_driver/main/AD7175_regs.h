@@ -90,27 +90,27 @@ enum AD7175_registers
 
 #ifdef AD7175_INIT
 /*! Array holding the info for the AD7175 registers - address, initial value, size */
-st_reg AD7175_regs[] = 
+DRAM_ATTR st_reg AD7175_regs[] = 
 {
     /*0x00*/{AD717X_STATUS_REG		, 0x00,   1}, //Status_Register
-    /*0x01*/{AD717X_ADCMODE_REG		, 0x800C, 2}, //ADC_Mode_Register
-    /*0x02*/{AD717X_IFMODE_REG		, 0x0104, 2}, //Interface_Mode_Register
+    /*0x01*/{AD717X_ADCMODE_REG		, 0x802C, 2}, //ADC_Mode_Register	/*REF_EN=1; MODE=2(standby mode); CLOCKSET=3(EXT XTAL);*/
+    /*0x02*/{AD717X_IFMODE_REG		, 0x0104, 2}, //Interface_Mode_Register /*DOUT_RESET=1; CRC_EN=1(CRC+XOR)*/
 	/*0x03*/{AD717X_REGCHECK_REG	, 0x0000, 3}, //REGCHECK
     /*0x04*/{AD717X_DATA_REG		, 0x0000, 3}, //Data_Register
-    /*0x06*/{AD717X_GPIOCON_REG		, 0x0400, 2}, //IOCon_Register
+    /*0x06*/{AD717X_GPIOCON_REG		, 0x0400, 2}, //IOCon_Register		/*ERR_EN=2(SYNC/ERROR pin output error state)*/
     /*0x07*/{AD717X_ID_REG			, 0x0000, 2}, //ID_st_reg
-    /*0x10*/{AD717X_CHMAP0_REG		, 0x8232, 2}, //CH_Map_1
+    /*0x10*/{AD717X_CHMAP0_REG		, 0x8001, 2}, //CH_Map_1			/*CH_EN0=1; AINPOS0=AIN0; AINNEG0=AIN1;*/
 	/*0x11*/{AD717X_CHMAP1_REG		, 0x0000, 2}, //CH_Map_2
 	/*0x12*/{AD717X_CHMAP2_REG		, 0x0000, 2}, //CH_Map_3
 	/*0x13*/{AD717X_CHMAP3_REG		, 0x0000, 2}, //CH_Map_4
-	/*0x20*/{AD717X_SETUPCON0_REG	, 0x1320, 2}, //Setup_Config_1
+	/*0x20*/{AD717X_SETUPCON0_REG	, 0x1320, 2}, //Setup_Config_1		/*BI_UNIPOLAR0=1(双极性编码输出); AINBUF0+=1(输入缓冲器使能); AINBUF1+=1(输入缓冲器使能); REF_SEL0=2(内部2.5v基准电压源)*/
 	/*0x21*/{AD717X_SETUPCON1_REG	, 0x0000, 2}, //Setup_Config_2
 	/*0x22*/{AD717X_SETUPCON2_REG	, 0x0000, 2}, //Setup_Config_3
 	/*0x23*/{AD717X_SETUPCON3_REG	, 0x0000, 2}, //Setup_Config_4
-	/*0x28*/{AD717X_FILTCON0_REG	, 0x0009, 2}, //Filter_Config_1
-	/*0x29*/{AD717X_FILTCON1_REG	, 0x0200, 2}, //Filter_Config_2
-	/*0x2a*/{AD717X_FILTCON2_REG	, 0x0200, 2}, //Filter_Config_3
-	/*0x2b*/{AD717X_FILTCON3_REG	, 0x0200, 2}, //Filter_Config_4
+	/*0x28*/{AD717X_FILTCON0_REG	, 0x0007, 2}, //Filter_Config_1		/*ODR0=7(100 KHz)*/
+	/*0x29*/{AD717X_FILTCON1_REG	, 0x0007, 2}, //Filter_Config_2
+	/*0x2a*/{AD717X_FILTCON2_REG	, 0x0007, 2}, //Filter_Config_3
+	/*0x2b*/{AD717X_FILTCON3_REG	, 0x0007, 2}, //Filter_Config_4
 	/*0x30*/{AD717X_OFFSET0_REG		, 0, 3}, 		//Offset_1
 	/*0x31*/{AD717X_OFFSET1_REG		, 0, 3}, 		//Offset_2
 	/*0x32*/{AD717X_OFFSET2_REG		, 0, 3}, 		//Offset_3
@@ -190,5 +190,53 @@ extern st_reg AD7175_regs[AD7175_REG_NO];
 #define FILT_CONF_REG_ORDER(x)          (((x) & 0x7) << 5)
 #define FILT_CONF_REG_ODR(x)            (((x) & 0x1F) << 0)
 
+typedef enum {
+    AD7172_SIN5_SIN1_SING_CYC_50000,
+    AD7172_SIN5_SIN1_SING_CYC_41667,
+    AD7172_SIN5_SIN1_SING_CYC_31250,
+    AD7172_SIN5_SIN1_SING_CYC_27778,
+    AD7172_SIN5_SIN1_SING_CYC_20833,
+    AD7172_SIN5_SIN1_SING_CYC_17857,
+    AD7172_SIN5_SIN1_SING_CYC_12500,
+    AD7172_SIN5_SIN1_SING_CYC_10000,
+    AD7172_SIN5_SIN1_SING_CYC_5000,
+    AD7172_SIN5_SIN1_SING_CYC_2500,
+    AD7172_SIN5_SIN1_SING_CYC_1000,
+    AD7172_SIN5_SIN1_SING_CYC_500,
+    AD7172_SIN5_SIN1_SING_CYC_398,
+    AD7172_SIN5_SIN1_SING_CYC_200,
+    AD7172_SIN5_SIN1_SING_CYC_100,
+    AD7172_SIN5_SIN1_SING_CYC_60,
+    AD7172_SIN5_SIN1_SING_CYC_50,
+    AD7172_SIN5_SIN1_SING_CYC_20,
+    AD7172_SIN5_SIN1_SING_CYC_16,
+    AD7172_SIN5_SIN1_SING_CYC_10,
+    AD7172_SIN5_SIN1_SING_CYC_5,
+	AD7172_FREQ_MAX,
+} ad7172_sin5_sin1_sing_sys_freq_hz_t;
+
+typedef enum {
+    AD7172_SIN5_SIN1_250000,
+    AD7172_SIN5_SIN1_125000,
+    AD7172_SIN5_SIN1_62500,
+    AD7172_SIN5_SIN1_50000,
+    AD7172_SIN5_SIN1_31250,
+    AD7172_SIN5_SIN1_25000,
+    AD7172_SIN5_SIN1_15625,
+    AD7172_SIN5_SIN1_10000,
+    AD7172_SIN5_SIN1_5000,
+    AD7172_SIN5_SIN1_2500,
+    AD7172_SIN5_SIN1_1000,
+    AD7172_SIN5_SIN1_500,
+    AD7172_SIN5_SIN1_398,
+    AD7172_SIN5_SIN1_200,
+    AD7172_SIN5_SIN1_100,
+    AD7172_SIN5_SIN1_60,
+    AD7172_SIN5_SIN1_50,
+    AD7172_SIN5_SIN1_20,
+    AD7172_SIN5_SIN1_16,
+    AD7172_SIN5_SIN1_10,
+    AD7172_SIN5_SIN1_5,
+} ad7172_sin5_sin1_freq_hz_t;
 
 #endif //__AD7175_REGS_H__
