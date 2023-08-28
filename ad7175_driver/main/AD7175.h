@@ -69,7 +69,8 @@ int32_t AD7175_Setup(void);
 int32_t AD717X_Reset(void);
 int32_t AD7175_GetState(uint8_t *st);
 esp_err_t AD717X_Standby(void);
-esp_err_t AD717X_Resume(void);
+esp_err_t AD717X_Resume(ad_mode_type_t);
 esp_err_t AD717X_Data_output_freq(int channel, int freq_hz);
+esp_err_t AD717X_Calibration(ad_mode_type_t cal_type);
 
 #endif // __AD7175_H__

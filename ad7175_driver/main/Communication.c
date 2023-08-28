@@ -205,7 +205,7 @@ SemaphoreHandle_t adc_data_ready_reading_from_isr(int32_t *buff, int32_t read_le
 	/* Reduce the consumption of SPI reading, which can reduce the time of about 2us */
 	spi_device_acquire_bus(spi_for_adc_init, portMAX_DELAY);
 
-	AD717X_Resume();// resume from standby mode.
+	AD717X_Resume(ADC_WORK_MODE_CONTINUOUS);// resume from standby mode.
 	DATA_BUFF = buff;
 	DATA_BUFF_LEN = read_len;
 	DATA_BUFF_CNT = 0;

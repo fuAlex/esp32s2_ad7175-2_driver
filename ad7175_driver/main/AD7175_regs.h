@@ -92,33 +92,33 @@ enum AD7175_registers
 /*! Array holding the info for the AD7175 registers - address, initial value, size */
 DRAM_ATTR st_reg AD7175_regs[] = 
 {
-    /*0x00*/{AD717X_STATUS_REG		, 0x00,   1}, //Status_Register
-    /*0x01*/{AD717X_ADCMODE_REG		, 0x802C, 2}, //ADC_Mode_Register	/*REF_EN=1; MODE=2(standby mode); CLOCKSET=3(EXT XTAL);*/
-    /*0x02*/{AD717X_IFMODE_REG		, 0x0104, 2}, //Interface_Mode_Register /*DOUT_RESET=1; CRC_EN=1(CRC+XOR)*/
-	/*0x03*/{AD717X_REGCHECK_REG	, 0x0000, 3}, //REGCHECK
-    /*0x04*/{AD717X_DATA_REG		, 0x0000, 3}, //Data_Register
-    /*0x06*/{AD717X_GPIOCON_REG		, 0x0400, 2}, //IOCon_Register		/*ERR_EN=2(SYNC/ERROR pin output error state)*/
-    /*0x07*/{AD717X_ID_REG			, 0x0000, 2}, //ID_st_reg
-    /*0x10*/{AD717X_CHMAP0_REG		, 0x8001, 2}, //CH_Map_1			/*CH_EN0=1; AINPOS0=AIN0; AINNEG0=AIN1;*/
-	/*0x11*/{AD717X_CHMAP1_REG		, 0x0000, 2}, //CH_Map_2
-	/*0x12*/{AD717X_CHMAP2_REG		, 0x0000, 2}, //CH_Map_3
-	/*0x13*/{AD717X_CHMAP3_REG		, 0x0000, 2}, //CH_Map_4
-	/*0x20*/{AD717X_SETUPCON0_REG	, 0x1320, 2}, //Setup_Config_1		/*BI_UNIPOLAR0=1(双极性编码输出); AINBUF0+=1(输入缓冲器使能); AINBUF1+=1(输入缓冲器使能); REF_SEL0=2(内部2.5v基准电压源)*/
-	/*0x21*/{AD717X_SETUPCON1_REG	, 0x0000, 2}, //Setup_Config_2
-	/*0x22*/{AD717X_SETUPCON2_REG	, 0x0000, 2}, //Setup_Config_3
-	/*0x23*/{AD717X_SETUPCON3_REG	, 0x0000, 2}, //Setup_Config_4
-	/*0x28*/{AD717X_FILTCON0_REG	, 0x0007, 2}, //Filter_Config_1		/*ODR0=7(100 KHz)*/
-	/*0x29*/{AD717X_FILTCON1_REG	, 0x0007, 2}, //Filter_Config_2
-	/*0x2a*/{AD717X_FILTCON2_REG	, 0x0007, 2}, //Filter_Config_3
-	/*0x2b*/{AD717X_FILTCON3_REG	, 0x0007, 2}, //Filter_Config_4
-	/*0x30*/{AD717X_OFFSET0_REG		, 0, 3}, 		//Offset_1
-	/*0x31*/{AD717X_OFFSET1_REG		, 0, 3}, 		//Offset_2
-	/*0x32*/{AD717X_OFFSET2_REG		, 0, 3}, 		//Offset_3
-	/*0x33*/{AD717X_OFFSET3_REG		, 0, 3}, 		//Offset_4
-	/*0x38*/{AD717X_GAIN0_REG		, 0, 3}, 		//Gain_1
-	/*0x39*/{AD717X_GAIN1_REG		, 0, 3}, 		//Gain_2
-	/*0x3a*/{AD717X_GAIN2_REG		, 0, 3}, 		//Gain_3
-	/*0x3b*/{AD717X_GAIN3_REG		, 0, 3}, 		//Gain_4
+    /*0x00*/{AD717X_STATUS_REG		, 0x00,     1}, //Status_Register
+    /*0x01*/{AD717X_ADCMODE_REG		, 0x802C,   2}, //ADC_Mode_Register	/*REF_EN=1; MODE=2(standby mode); CLOCKSET=3(EXT XTAL);*/
+    /*0x02*/{AD717X_IFMODE_REG		, 0x0104,   2}, //Interface_Mode_Reg/*DOUT_RESET=1; CRC_EN=1(CRC+XOR)*/
+	/*0x03*/{AD717X_REGCHECK_REG	, 0x000000, 3}, //REGCHECK
+    /*0x04*/{AD717X_DATA_REG		, 0x000000, 3}, //Data_Register
+    /*0x06*/{AD717X_GPIOCON_REG		, 0x0400,   2}, //IOCon_Register	/*ERR_EN=2(SYNC/ERROR pin output error state)*/
+    /*0x07*/{AD717X_ID_REG			, 0x0000,   2}, //ID_st_reg
+    /*0x10*/{AD717X_CHMAP0_REG		, 0x8001,   2}, //CH_Map_1			/*CH_EN0=1; AINPOS0=AIN0; AINNEG0=AIN1;*/
+	/*0x11*/{AD717X_CHMAP1_REG		, 0x0000,   2}, //CH_Map_2
+	/*0x12*/{AD717X_CHMAP2_REG		, 0x0000,   2}, //CH_Map_3
+	/*0x13*/{AD717X_CHMAP3_REG		, 0x0000,   2}, //CH_Map_4
+	/*0x20*/{AD717X_SETUPCON0_REG	, 0x1320,   2}, //Setup_Config_1	/*BI_UNIPOLAR0=1(双极性编码输出); AINBUF0+=1(输入缓冲器使能); AINBUF1+=1(输入缓冲器使能); REF_SEL0=2(内部2.5v基准电压源)*/
+	/*0x21*/{AD717X_SETUPCON1_REG	, 0x0000,   2}, //Setup_Config_2
+	/*0x22*/{AD717X_SETUPCON2_REG	, 0x0000,   2}, //Setup_Config_3
+	/*0x23*/{AD717X_SETUPCON3_REG	, 0x0000,   2}, //Setup_Config_4
+	/*0x28*/{AD717X_FILTCON0_REG	, 0x0007,   2}, //Filter_Config_1	/*ODR0=7(100 KHz)*/
+	/*0x29*/{AD717X_FILTCON1_REG	, 0x0007,   2}, //Filter_Config_2
+	/*0x2a*/{AD717X_FILTCON2_REG	, 0x0007,   2}, //Filter_Config_3
+	/*0x2b*/{AD717X_FILTCON3_REG	, 0x0007,   2}, //Filter_Config_4
+	/*0x30*/{AD717X_OFFSET0_REG		, 0x800000, 3}, //Offset_1
+	/*0x31*/{AD717X_OFFSET1_REG		, 0x800000, 3}, //Offset_2
+	/*0x32*/{AD717X_OFFSET2_REG		, 0x800000, 3}, //Offset_3
+	/*0x33*/{AD717X_OFFSET3_REG		, 0x800000, 3}, //Offset_4
+	/*0x38*/{AD717X_GAIN0_REG		, 0x555555, 3}, //Gain_1
+	/*0x39*/{AD717X_GAIN1_REG		, 0x555555, 3}, //Gain_2
+	/*0x3a*/{AD717X_GAIN2_REG		, 0x555555, 3}, //Gain_3
+	/*0x3b*/{AD717X_GAIN3_REG		, 0x555555, 3}, //Gain_4
 	/*0xFF*/{0xFF, 0, 1}, 		//Communications_Register
 };
 #else
@@ -238,5 +238,15 @@ typedef enum {
     AD7172_SIN5_SIN1_10,
     AD7172_SIN5_SIN1_5,
 } ad7172_sin5_sin1_freq_hz_t;
+
+typedef enum {
+    ADC_WORK_MODE_CONTINUOUS= 0x0,
+    ADC_WORK_MODE_SINGLE    = 0x1,
+    ADC_SLEEP_STANDBY       = 0x2,
+    ADC_SLEEP_DONE          = 0x3,
+    ADC_CAL_INTER_OFFSET    = 0x4,
+    ADC_CAL_SYS_OFFSET      = 0x6,
+    ADC_CAL_SYS_GAIN        = 0x7,
+} ad_mode_type_t;
 
 #endif //__AD7175_REGS_H__

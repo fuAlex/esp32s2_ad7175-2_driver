@@ -325,10 +325,13 @@ AD717X_Standby(void)
 inline
 esp_err_t
 ADC_COMM_DRIVER_ATTR
-AD717X_Resume(void)
+AD717X_Resume(ad_mode_type_t work_mode)
 {
+    if (work_mode > ADC_WORK_MODE_SINGLE) {
+        return ESP_FAIL;
+    }
     AD7175_regs[ADC_Mode_Register].value &= (~(AD717X_ADCMODE_REG_MODE(0x7)));
-    AD7175_regs[ADC_Mode_Register].value |= (AD717X_ADCMODE_REG_MODE(0x0));
+    AD7175_regs[ADC_Mode_Register].value |= (AD717X_ADCMODE_REG_MODE(work_mode));
     return AD7175_WriteRegister(AD7175_regs[ADC_Mode_Register]);
 }
 
@@ -367,6 +370,23 @@ esp_err_t AD717X_Data_output_freq(int channel, int freq_hz)
         return AD7175_WriteRegister(AD7175_regs[Filter_Config_4]);
     }
     return ESP_OK;
+}
+
+/***************************************************************************//**
+* @brief AD717X calibration.
+*
+* @return Returns 0 for success or negative error code.
+*******************************************************************************/
+inline
+esp_err_t
+AD717X_Calibration(ad_mode_type_t cal_type)
+{
+    if (cal_type < ADC_CAL_INTER_OFFSET || cal_type > ADC_CAL_SYS_GAIN) {
+        return ESP_FAIL;
+    }
+    AD7175_regs[ADC_Mode_Register].value &= (~(AD717X_ADCMODE_REG_MODE(0x7)));
+    AD7175_regs[ADC_Mode_Register].value |= (AD717X_ADCMODE_REG_MODE(cal_type));
+    return AD7175_WriteRegister(AD7175_regs[ADC_Mode_Register]);
 }
 
 /**************************************************************************//**
@@ -430,13 +450,26 @@ int32_t AD7175_Setup(void)
     ESP_ERROR_CHECK( AD7175_ReadRegister(&AD7175_regs[Setup_Config_1]) );
     printf("setup 1 val %04lx\n", (uint32_t)AD7175_regs[Setup_Config_1].value);
 
-    /*Protect the user registers*/
-    // AD7175_regs[Interface_Mode_Register].value |= AD717X_IFMODE_REG_REG_CHECK;
-    // ESP_ERROR_CHECK( AD7175_WriteRegister(AD7175_regs[Interface_Mode_Register]) );
     ESP_ERROR_CHECK( AD7175_ReadRegister(&AD7175_regs[IOCon_Register]) );
     printf("IOCON val %04lx\n", (uint32_t)AD7175_regs[IOCon_Register].value);
 
-    AD717X_Resume();
+    // Calibration
+    uint64_t offset_sum = 0;
+    for (int i=0; i<16; i++) {
+        AD717X_Calibration(ADC_CAL_INTER_OFFSET);
+        vTaskDelay(10);
+        ESP_ERROR_CHECK( AD7175_ReadRegister(&AD7175_regs[Offset_1]) );
+        offset_sum += AD7175_regs[Offset_1].value;
+        // printf("Offset_1 val %04lx\n", (uint32_t)AD7175_regs[Offset_1].value);
+    }
+    AD7175_regs[Offset_1].value = (int32_t)offset_sum / 16;
+    ESP_ERROR_CHECK( AD7175_WriteRegister(AD7175_regs[Offset_1]) );
+    ESP_ERROR_CHECK( AD7175_ReadRegister(&AD7175_regs[Offset_1]) );
+    printf("Offset_1 val %04lx\n", (uint32_t)AD7175_regs[Offset_1].value);
+    ESP_ERROR_CHECK( AD7175_ReadRegister(&AD7175_regs[Gain_1]) );
+    printf("Gain_1 val %04lx\n", (uint32_t)AD7175_regs[Gain_1].value);
+
+    AD717X_Resume(ADC_WORK_MODE_CONTINUOUS);
 
     return ESP_OK;
 }
