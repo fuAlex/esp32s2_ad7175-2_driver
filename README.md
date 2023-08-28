@@ -10,6 +10,7 @@ AD7175-2 work with ESP32-S2
 5. When reading ADC data at high speed（500KHz）, perform other tasks after waiting.
 
 # HW connect:
+>
 AD7175-2        <-> ESP32S2 PIN
 PIN_NUM_MISO 		37
 PIN_NUM_MOSI 		35
